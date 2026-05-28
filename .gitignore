@@ -38,6 +38,9 @@ placetrade/
 .DS_Store
 Thumbs.db
 
+# Bot state
+bot_state.json
+
 # Logs
 *.log
 

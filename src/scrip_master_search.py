@@ -432,6 +432,62 @@ def search_etfs(query: str, exchange="NSE", limit: int = 50) -> List[Dict]:
         return []
 
 
+def get_nfo_stocks(exchange="NSE") -> List[Dict]:
+    """
+    Get all NFO (Futures & Options) stocks from scrip master.
+    Identifies stocks that have OPTSTK/FUTSTK entries under exch_seg="NFO",
+    then maps them back to NSE -EQ symbols.
+
+    :param exchange: Target exchange for the returned symbols (NSE)
+    :return: List of stock dicts with symbol, name, token
+    """
+    scrip_data = fetch_scrip_master()
+    if scrip_data is None:
+        return []
+
+    nfo_underlyings = set()
+    for item in scrip_data:
+        if (item.get("exch_seg") == "NFO" and
+                item.get("instrumenttype") in ("OPTSTK", "FUTSTK")):
+            name = item.get("name", "")
+            if name:
+                nfo_underlyings.add(name.upper())
+
+    results = []
+    seen = set()
+    for item in scrip_data:
+        if item.get("exch_seg") != exchange:
+            continue
+        inst_type = item.get("instrumenttype", "")
+        symbol = item.get("symbol", "")
+        name = item.get("name", "")
+
+        if not symbol.endswith("-EQ") or (inst_type != "" and inst_type != "EQ"):
+            continue
+
+        symbol_upper = symbol.upper()
+        name_upper = name.upper()
+        symbol_base = symbol_upper.replace("-EQ", "")
+
+        # Skip test entries
+        if "TEST" in symbol_upper or "TEST" in name_upper:
+            continue
+
+        if name_upper in nfo_underlyings or symbol_base in nfo_underlyings:
+            if name_upper in seen:
+                continue
+            seen.add(name_upper)
+            results.append({
+                "symbol": symbol,
+                "name": name,
+                "token": str(item.get("token")),
+                "exchange": item.get("exch_seg"),
+            })
+
+    results.sort(key=lambda x: x["name"])
+    return results
+
+
 def get_item_by_symbol(symbol: str, exchange="NSE") -> Optional[Dict]:
     """
     Get item by exact symbol match
