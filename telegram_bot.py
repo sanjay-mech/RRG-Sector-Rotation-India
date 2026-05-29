@@ -335,13 +335,20 @@ def main():
         logger.error("TELEGRAM_BOT_TOKEN not set in .env. Get one from @BotFather.")
         sys.exit(1)
 
-    from telegram import Update
-    from telegram.ext import Application, CommandHandler, ContextTypes
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+    from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 
     app = Application.builder().token(TELEGRAM_TOKEN).build()
 
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("\U0001f7e2 Subscribe Sectors", callback_data="sub_sectors"),
+             InlineKeyboardButton("\U0001f535 Subscribe NFO", callback_data="sub_nfo")],
+            [InlineKeyboardButton("\U0001f50d Check Status", callback_data="status"),
+             InlineKeyboardButton("\U0001f4c8 Alert Now", callback_data="alert_now")],
+            [InlineKeyboardButton("\u26d4 Unsub All", callback_data="unsub_all")],
+        ])
         await update.message.reply_text(
             f"\U0001f44b *Hey {user.first_name}! Welcome aboard!* \U0001f680\n\n"
             "\U0001f4ca I track the *RRG (Relative Rotation Graph)* for Nifty sectors "
@@ -361,7 +368,8 @@ def main():
             "\U0001f535 `/check_nfo` \u2014 Trigger NFO batch scan\n"
             "\U0001f535 `/alert_now` \u2014 Instant sector shift report\n\n"
             "\u23f0 *Note:* All 211 NFO stocks process in one cycle (~3\u20134 min). "
-            "You'll only be notified when something *changes quadrant*. Sit back and let the bot watch the markets! \U0001f60e"
+            "You'll only be notified when something *changes quadrant*. Sit back and let the bot watch the markets! \U0001f60e",
+            reply_markup=kb,
         )
 
     async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -572,6 +580,43 @@ def main():
             f"Quadrant:  {emoji} {result['quadrant']}"
         )
 
+    async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        await query.answer()
+        cid = update.effective_user.id
+        cmd = query.data
+        if cmd == "sub_sectors":
+            subscribe_sectors(cid)
+            await query.edit_message_text("Subscribed to sector rotation alerts.")
+        elif cmd == "sub_nfo":
+            subscribe_nfo(cid)
+            nfo_syms = get_nfo_list()
+            await query.edit_message_text(f"Subscribed to NFO alerts ({len(nfo_syms)} stocks).")
+        elif cmd == "unsub_all":
+            unsubscribe_all(cid)
+            await query.edit_message_text("Unsubscribed from all alerts.")
+        elif cmd == "status":
+            await query.edit_message_text("Computing sector RRG values...")
+            sectors = run_rrg_check()
+            if not sectors:
+                await query.edit_message_text("Failed to fetch sector RRG data.")
+                return
+            table = format_status_table(sectors)
+            await query.edit_message_text(f"Sector RRG Status\n\n{table}", parse_mode="Markdown")
+        elif cmd == "alert_now":
+            await query.edit_message_text("Scanning all sectors for shifts...")
+            sectors = run_rrg_check()
+            if not sectors:
+                await query.edit_message_text("Failed to fetch sector data.")
+                return
+            grouped = detect_alerts(sectors)
+            alert_text = build_alert_message(grouped, timeframe=RRGConfig["timeframe"])
+            if alert_text:
+                await query.edit_message_text(alert_text, parse_mode="Markdown")
+            else:
+                await query.edit_message_text("No sector shifts detected right now.")
+
+    app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("sub_sectors", sub_sectors))
