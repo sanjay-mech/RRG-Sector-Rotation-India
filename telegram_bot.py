@@ -596,25 +596,25 @@ def main():
             unsubscribe_all(cid)
             await query.edit_message_text("Unsubscribed from all alerts.")
         elif cmd == "status":
-            await query.edit_message_text("Computing sector RRG values...")
+            msg = await context.bot.send_message(chat_id=cid, text="Computing sector RRG values...")
             sectors = run_rrg_check()
             if not sectors:
-                await query.edit_message_text("Failed to fetch sector RRG data.")
+                await msg.edit_text("Failed to fetch sector RRG data.")
                 return
             table = format_status_table(sectors)
-            await query.edit_message_text(f"Sector RRG Status\n\n{table}", parse_mode="Markdown")
+            await msg.edit_text(f"Sector RRG Status\n\n{table}", parse_mode="Markdown")
         elif cmd == "alert_now":
-            await query.edit_message_text("Scanning all sectors for shifts...")
+            msg = await context.bot.send_message(chat_id=cid, text="Scanning all sectors for shifts...")
             sectors = run_rrg_check()
             if not sectors:
-                await query.edit_message_text("Failed to fetch sector data.")
+                await msg.edit_text("Failed to fetch sector data.")
                 return
             grouped = detect_alerts(sectors)
             alert_text = build_alert_message(grouped, timeframe=RRGConfig["timeframe"])
             if alert_text:
-                await query.edit_message_text(alert_text, parse_mode="Markdown")
+                await msg.edit_text(alert_text, parse_mode="Markdown")
             else:
-                await query.edit_message_text("No sector shifts detected right now.")
+                await msg.edit_text("No sector shifts detected right now.")
 
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(CommandHandler("start", start))
