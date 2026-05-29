@@ -641,7 +641,7 @@ def main():
     public_ip = get_public_ip()
     logger.info(f"RRG Telegram Bot started. Public IP: {public_ip}")
     print(f"RRG Telegram Bot is running (IP: {public_ip}). Press Ctrl+C to stop.")
-    app.run_polling(allowed_updates=["message"])
+    app.run_polling(allowed_updates=["message", "callback_query"])
 
 
 if __name__ == "__main__":
