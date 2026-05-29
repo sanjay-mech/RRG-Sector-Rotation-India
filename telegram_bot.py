@@ -314,6 +314,14 @@ def run_check_only():
     print()
 
 
+def get_public_ip() -> str:
+    try:
+        import requests
+        return requests.get("https://api.ipify.org", timeout=10).text.strip()
+    except Exception as e:
+        return f"unknown ({e})"
+
+
 def main():
     parser = argparse.ArgumentParser(description="RRG Telegram Bot")
     parser.add_argument("--check-only", action="store_true", help="One-shot RRG check to console, no bot")
@@ -584,8 +592,9 @@ def main():
     job_queue = app.job_queue
     job_queue.run_repeating(alert_callback, interval=3600, first=10)
 
-    logger.info("RRG Telegram Bot started. Polling for commands...")
-    print("RRG Telegram Bot is running. Press Ctrl+C to stop.")
+    public_ip = get_public_ip()
+    logger.info(f"RRG Telegram Bot started. Public IP: {public_ip}")
+    print(f"RRG Telegram Bot is running (IP: {public_ip}). Press Ctrl+C to stop.")
     app.run_polling(allowed_updates=["message"])
 
 
