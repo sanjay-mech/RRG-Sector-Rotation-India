@@ -61,12 +61,13 @@ class AngelOneLoader:
     def _login(self):
         """Login to AngelOne API"""
         try:
-            totp = pyotp.TOTP(self.token).now()
-            for i in range(10):
+            for i in range(3):
+                totp = pyotp.TOTP(self.token).now()
                 data = self.smartApi.generateSession(self.client_id, self.password, totp)
                 if data.get('status'):
                     break
-                time.sleep(2)
+                if i < 2:
+                    time.sleep(5)
             
             if not data.get('status'):
                 raise Exception("Failed to login to AngelOne API")
