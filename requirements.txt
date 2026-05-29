@@ -7,4 +7,4 @@ python-dotenv>=1.0.0
 logzero
 websocket
 smartapi-python==1.4.1
-python-telegram-bot>=20.0
+python-telegram-bot[job-queue]>=20.0
