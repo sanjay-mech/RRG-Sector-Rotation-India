@@ -56,6 +56,9 @@ from sectors import BENCHMARKS
 from token_fetcher import get_token_from_symbol
 from scrip_master_search import get_nfo_stocks
 
+# Prevents first-cycle spam after every bot restart
+_first_cycle_done = False
+
 
 def _init_loader() -> Optional[AngelOneLoader]:
     if not all([API_CONFIG["API_KEY"], API_CONFIG["CLIENT_ID"], API_CONFIG["PASSWORD"], API_CONFIG["TOTP_TOKEN"]]):
@@ -106,7 +109,14 @@ def run_rrg_check() -> Dict[str, dict]:
     return sectors
 
 
-def build_alert_message(grouped_alerts: Dict[str, List[dict]], timeframe: str = "weekly") -> Optional[str]:
+STOCK_TITLES = {
+    "Lagging":   "STOCK BREAKDOWN",
+    "Weakening": "STOCK COOLING",
+    "Improving": "STOCK RECOVERY",
+    "Leading":   "STOCK LEADING",
+}
+
+def build_alert_message(grouped_alerts: Dict[str, List[dict]], timeframe: str = "weekly", scope: str = "sector") -> Optional[str]:
     if not grouped_alerts:
         return None
 
@@ -134,9 +144,12 @@ def build_alert_message(grouped_alerts: Dict[str, List[dict]], timeframe: str = 
         alerts = grouped_alerts.get(cat)
         if not alerts:
             continue
-        cat_info = CATEGORY_MAP[cat]
+        if scope == "stock":
+            title = STOCK_TITLES.get(cat, cat)
+        else:
+            title = CATEGORY_MAP[cat]["title"]
         icon = category_icons[cat]
-        lines.append(f"{icon} *{cat_info['title']}*")
+        lines.append(f"{icon} *{title}*")
         for a in alerts:
             lines.append(f"{a['emoji']} *{a['name']}* \u2192 {a['quadrant']}")
             lines.append(f"  \U0001f504 `{a['path_str']}`")
@@ -154,6 +167,7 @@ async def send_alert_to_users(bot, chat_ids: List[int], message: str):
 
 
 async def run_alert_cycle(application=None):
+    global _first_cycle_done
     logger.info("Starting RRG alert cycle")
     sectors = run_rrg_check()
     if not sectors:
@@ -189,7 +203,7 @@ async def run_alert_cycle(application=None):
                                     stock_data[sym] = result
                             if stock_data:
                                 stock_grouped = detect_alerts(stock_data)
-                                stock_alert_text = build_alert_message(stock_grouped, timeframe=RRGConfig["timeframe"])
+                                stock_alert_text = build_alert_message(stock_grouped, timeframe=RRGConfig["timeframe"], scope="stock")
                     except Exception as e:
                         logger.error(f"Stock RRG check failed: {e}")
                 loader.close()
@@ -229,10 +243,16 @@ async def run_alert_cycle(application=None):
                             logger.info(f"Computed RRG for {len(nfo_data)}/{len(nfo_symbols)} NFO stocks")
                             if nfo_data:
                                 nfo_grouped = detect_alerts(nfo_data)
-                                nfo_alert_text = build_alert_message(nfo_grouped, timeframe=RRGConfig["timeframe"])
+                                nfo_alert_text = build_alert_message(nfo_grouped, timeframe=RRGConfig["timeframe"], scope="stock")
                     except Exception as e:
                         logger.error(f"NFO RRG check failed: {e}")
                 loader.close()
+
+    # First cycle after startup: establish baseline silently, don't send alerts
+    if not _first_cycle_done:
+        _first_cycle_done = True
+        logger.info("First cycle done — establishing baseline, skipping alerts")
+        return
 
     if not application:
         return
@@ -448,7 +468,7 @@ def main():
 
             if nfo_data:
                 nfo_grouped = detect_alerts(nfo_data)
-                alert_text = build_alert_message(nfo_grouped, timeframe=RRGConfig["timeframe"])
+                alert_text = build_alert_message(nfo_grouped, timeframe=RRGConfig["timeframe"], scope="stock")
                 if alert_text:
                     await msg.edit_text(alert_text, parse_mode="Markdown")
                 else:
