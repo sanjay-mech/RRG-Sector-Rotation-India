@@ -612,6 +612,10 @@ def main():
         elif cmd == "sub_nfo":
             subscribe_nfo(cid)
             nfo_syms = get_nfo_list()
+            if not nfo_syms:
+                nfo_syms = [s["symbol"] for s in get_nfo_stocks()]
+                if nfo_syms:
+                    set_nfo_list(nfo_syms)
             await query.edit_message_text(f"Subscribed to NFO alerts ({len(nfo_syms)} stocks).")
         elif cmd == "unsub_all":
             unsubscribe_all(cid)
