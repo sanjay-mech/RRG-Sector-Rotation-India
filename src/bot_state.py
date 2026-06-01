@@ -9,7 +9,12 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-STATE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bot_state.json")
+# Use Railway persistent volume if available, else project root
+_railway_data = "/data/bot_state.json"
+if os.path.isdir("/data"):
+    STATE_FILE = _railway_data
+else:
+    STATE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bot_state.json")
 
 DEFAULT_STATE = {
     "users": {},
