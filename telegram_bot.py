@@ -366,7 +366,8 @@ def main():
             "\U0001f535 `/status` \u2014 Current sector RRG snapshot\n"
             "\U0001f535 `/check_stock RELIANCE-EQ` \u2014 Single stock RRG\n"
             "\U0001f535 `/check_nfo` \u2014 Trigger NFO batch scan\n"
-            "\U0001f535 `/alert_now` \u2014 Instant sector shift report\n\n"
+            "\U0001f535 `/alert_now` \u2014 Instant sector shift report\n"
+            "\U0001f535 `/mysubs` \u2014 See your current subscriptions\n\n"
             "\u23f0 *Note:* All 211 NFO stocks process in one cycle (~3\u20134 min). "
             "You'll only be notified when something *changes quadrant*. Sit back and let the bot watch the markets! \U0001f60e",
             reply_markup=kb,
@@ -495,6 +496,26 @@ def main():
         except Exception as e:
             await msg.edit_text(f"Error: {e}")
             loader.close()
+
+    async def my_subs(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        cid = update.effective_user.id
+        user = get_user(cid)
+        lines = []
+        lines.append("\U0001f4cb *Your Subscriptions*")
+        if user.get("subscribed_sectors"):
+            lines.append("\U0001f7e2 Sectors: \u2714\ufe0f Subscribed")
+        else:
+            lines.append("\U0001f534 Sectors: \u274c Not subscribed")
+        if user.get("subscribed_nfo"):
+            lines.append("\U0001f535 NFO Stocks: \u2714\ufe0f Subscribed")
+        else:
+            lines.append("\U0001f534 NFO Stocks: \u274c Not subscribed")
+        stocks = user.get("subscribed_stocks", [])
+        if stocks:
+            lines.append(f"\U0001f7e2 Custom Stocks: `{', '.join(stocks)}`")
+        else:
+            lines.append("\U0001f534 Custom Stocks: None")
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
     async def unsub_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cid = update.effective_user.id
@@ -626,6 +647,7 @@ def main():
     app.add_handler(CommandHandler("sub_nfo", sub_nfo))
     app.add_handler(CommandHandler("unsub_nfo", unsub_nfo))
     app.add_handler(CommandHandler("check_nfo", check_nfo))
+    app.add_handler(CommandHandler("mysubs", my_subs))
     app.add_handler(CommandHandler("unsub_all", unsub_all))
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("alert_now", alert_now))
