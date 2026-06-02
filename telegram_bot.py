@@ -368,7 +368,8 @@ def main():
             "\U0001f535 `/check_nfo` \u2014 Trigger NFO batch scan\n"
             "\U0001f535 `/alert_now` \u2014 Instant sector shift report\n"
             "\U0001f535 `/mysubs` \u2014 See your current subscriptions\n\n"
-            "\u23f0 *Note:* All 211 NFO stocks process in one cycle (~3\u20134 min). "
+            "\u23f0 *Schedule:* Mon\u2013Fri at 9:30 AM \u2192 3:15 PM IST (hourly). "
+            "All 211 NFO stocks process each cycle (~3\u20134 min). "
             "You'll only be notified when something *changes quadrant*. Sit back and let the bot watch the markets! \U0001f60e",
             reply_markup=kb,
         )
@@ -658,11 +659,20 @@ def main():
     app.add_handler(CommandHandler("check_sectors", check_sectors))
     app.add_handler(CommandHandler("check_stock", check_stock))
 
+    import datetime as _dt
+
     async def alert_callback(context: ContextTypes.DEFAULT_TYPE):
         await run_alert_cycle(application=context.application)
 
     job_queue = app.job_queue
-    job_queue.run_repeating(alert_callback, interval=3600, first=10)
+    market_hours = [
+        _dt.time(9, 30), _dt.time(10, 30), _dt.time(11, 30),
+        _dt.time(12, 30), _dt.time(13, 30), _dt.time(14, 30),
+        _dt.time(15, 15),
+    ]
+    weekdays = (0, 1, 2, 3, 4)
+    for t in market_hours:
+        job_queue.run_daily(alert_callback, time=t, days=weekdays)
 
     public_ip = get_public_ip()
     logger.info(f"RRG Telegram Bot started. Public IP: {public_ip}")
