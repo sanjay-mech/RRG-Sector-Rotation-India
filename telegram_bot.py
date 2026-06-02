@@ -659,16 +659,19 @@ def main():
     app.add_handler(CommandHandler("check_sectors", check_sectors))
     app.add_handler(CommandHandler("check_stock", check_stock))
 
+    from zoneinfo import ZoneInfo
     import datetime as _dt
 
     async def alert_callback(context: ContextTypes.DEFAULT_TYPE):
         await run_alert_cycle(application=context.application)
 
     job_queue = app.job_queue
+    _ist = ZoneInfo("Asia/Kolkata")
     market_hours = [
-        _dt.time(9, 30), _dt.time(10, 30), _dt.time(11, 30),
-        _dt.time(12, 30), _dt.time(13, 30), _dt.time(14, 30),
-        _dt.time(15, 15),
+        _dt.time(9, 30, tzinfo=_ist), _dt.time(10, 30, tzinfo=_ist),
+        _dt.time(11, 30, tzinfo=_ist), _dt.time(12, 30, tzinfo=_ist),
+        _dt.time(13, 30, tzinfo=_ist), _dt.time(14, 30, tzinfo=_ist),
+        _dt.time(15, 15, tzinfo=_ist),
     ]
     weekdays = (0, 1, 2, 3, 4)
     for t in market_hours:
