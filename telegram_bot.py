@@ -120,7 +120,8 @@ def build_alert_message(grouped_alerts: Dict[str, List[dict]], timeframe: str = 
     if not grouped_alerts:
         return None
 
-    now = datetime.now()
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
     time_str = now.strftime("%I:%M %p").lstrip("0")
     date_str = now.strftime("%b %d, %I:%M %p").lstrip("0")
     tf_display = timeframe.capitalize()
