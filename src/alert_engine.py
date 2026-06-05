@@ -6,6 +6,7 @@ matching the desired format.
 import logging
 import sys
 import os
+import time
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
@@ -65,6 +66,7 @@ CATEGORY_MAP = {
 }
 
 def compute_rrg(loader, symbol: str, token: str, benchmark_closes: pd.Series) -> Optional[Tuple[float, float, str]]:
+    time.sleep(0.3)
     try:
         df = loader.get(symbol, token)
         if df is None or df.empty:
