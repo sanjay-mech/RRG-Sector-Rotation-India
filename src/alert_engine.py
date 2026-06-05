@@ -66,13 +66,22 @@ CATEGORY_MAP = {
 }
 
 def compute_rrg(loader, symbol: str, token: str, benchmark_closes: pd.Series) -> Optional[Tuple[float, float, str]]:
-    time.sleep(0.3)
-    try:
-        df = loader.get(symbol, token)
-        if df is None or df.empty:
+    time.sleep(0.5)
+    for attempt in range(3):
+        try:
+            df = loader.get(symbol, token)
+            break
+        except Exception as e:
+            if "Access denied" in str(e) or "exceeding access" in str(e):
+                logger.warning(f"Rate limited for {symbol}, retrying after 3s (attempt {attempt+1}/3)")
+                time.sleep(3)
+                continue
+            logger.warning(f"Failed to fetch data for {symbol}: {e}")
             return None
-    except Exception as e:
-        logger.warning(f"Failed to fetch data for {symbol}: {e}")
+    else:
+        logger.warning(f"Failed to fetch data for {symbol} after 3 attempts")
+        return None
+    if df is None or df.empty:
         return None
 
     item_closes = df["Close"]
