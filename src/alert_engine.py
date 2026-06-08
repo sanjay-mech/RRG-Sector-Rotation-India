@@ -72,8 +72,7 @@ def _rate_limit():
     """Ensure we stay under AngelOne rate limits (~5 calls per 10s)."""
     global _rrg_call_times
     now = time.time()
-    # Keep only timestamps from last 12 seconds
-    _rrg_call_times = [t for t in _rrg_call_times if now - t < 12]
+    _rrg_call_times[:] = [t for t in _rrg_call_times if now - t < 12]
     if len(_rrg_call_times) >= 5:
         wait = _rrg_call_times[0] + 12 - now
         if wait > 0:
