@@ -65,26 +65,32 @@ CATEGORY_MAP = {
     "Leading":   {"emoji": "\U0001f535", "title": "SECTOR LEADING (MACRO)"},
 }
 
-# Counter for rate limiting across calls
-_rrg_call_counter = 0
+# Rate limiting: track call timestamps to stay under ~5 calls per 10 seconds
+_rrg_call_times: list = []
+
+def _rate_limit():
+    """Ensure we stay under AngelOne rate limits (~5 calls per 10s)."""
+    global _rrg_call_times
+    now = time.time()
+    # Keep only timestamps from last 12 seconds
+    _rrg_call_times = [t for t in _rrg_call_times if now - t < 12]
+    if len(_rrg_call_times) >= 5:
+        wait = _rrg_call_times[0] + 12 - now
+        if wait > 0:
+            time.sleep(wait)
+    _rrg_call_times.append(time.time())
 
 def compute_rrg(loader, symbol: str, token: str, benchmark_closes: pd.Series) -> Optional[Tuple[float, float, str]]:
-    global _rrg_call_counter
-    _rrg_call_counter += 1
-    # Pause every 10 calls to avoid hitting AngelOne rate limit
-    if _rrg_call_counter % 10 == 0:
-        logger.info(f"Rate limit pause after {_rrg_call_counter} calls")
-        time.sleep(3)
-    else:
-        time.sleep(0.8)
+    _rate_limit()
     for attempt in range(3):
         try:
             df = loader.get(symbol, token)
             break
         except Exception as e:
             if "Access denied" in str(e) or "exceeding access" in str(e):
-                logger.warning(f"Rate limited for {symbol}, retrying after 3s (attempt {attempt+1}/3)")
-                time.sleep(3)
+                logger.warning(f"Rate limited for {symbol}, retrying after 5s (attempt {attempt+1}/3)")
+                time.sleep(5)
+                _rate_limit()
                 continue
             logger.warning(f"Failed to fetch data for {symbol}: {e}")
             return None
