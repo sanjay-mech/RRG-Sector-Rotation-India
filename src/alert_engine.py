@@ -65,8 +65,18 @@ CATEGORY_MAP = {
     "Leading":   {"emoji": "\U0001f535", "title": "SECTOR LEADING (MACRO)"},
 }
 
+# Counter for rate limiting across calls
+_rrg_call_counter = 0
+
 def compute_rrg(loader, symbol: str, token: str, benchmark_closes: pd.Series) -> Optional[Tuple[float, float, str]]:
-    time.sleep(0.5)
+    global _rrg_call_counter
+    _rrg_call_counter += 1
+    # Pause every 10 calls to avoid hitting AngelOne rate limit
+    if _rrg_call_counter % 10 == 0:
+        logger.info(f"Rate limit pause after {_rrg_call_counter} calls")
+        time.sleep(3)
+    else:
+        time.sleep(0.8)
     for attempt in range(3):
         try:
             df = loader.get(symbol, token)
