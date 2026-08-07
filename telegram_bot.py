@@ -679,9 +679,7 @@ def main():
     weekdays = (0, 1, 2, 3, 4)
     for t in market_hours:
         job_queue.run_daily(alert_callback, time=t, days=weekdays)
-    for job in job_queue.jobs():
-        logger.info(f"Scheduled job: {job.name} next run {job.next_t}")
-    logger.info(f"Scheduler started with {len(job_queue.jobs())} jobs")
+    logger.info(f"Scheduler started with {len(list(job_queue.jobs()))} daily jobs")
 
     public_ip = get_public_ip()
     logger.info(f"RRG Telegram Bot started. Public IP: {public_ip}")
