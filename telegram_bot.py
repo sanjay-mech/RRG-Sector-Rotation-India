@@ -169,7 +169,9 @@ async def send_alert_to_users(bot, chat_ids: List[int], message: str):
 
 async def run_alert_cycle(application=None):
     global _first_cycle_done
-    logger.info("Starting RRG alert cycle")
+    from zoneinfo import ZoneInfo
+    _now_ist = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S")
+    logger.info(f"Starting RRG alert cycle at {_now_ist} IST")
     sectors = run_rrg_check()
     if not sectors:
         logger.warning("No sector data returned, skipping alert cycle")
@@ -677,6 +679,9 @@ def main():
     weekdays = (0, 1, 2, 3, 4)
     for t in market_hours:
         job_queue.run_daily(alert_callback, time=t, days=weekdays)
+    for job in job_queue.jobs():
+        logger.info(f"Scheduled job: {job.name} next run {job.next_t}")
+    logger.info(f"Scheduler started with {len(job_queue.jobs())} jobs")
 
     public_ip = get_public_ip()
     logger.info(f"RRG Telegram Bot started. Public IP: {public_ip}")
